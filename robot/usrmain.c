@@ -64,8 +64,8 @@
  define
  ------------------------------------------------------------------------- */
 
-#define R_MOTOR_PORT 0
-#define L_MOTOR_PORT 1
+#define R_MOTOR_PORT 2
+#define L_MOTOR_PORT 3
 
 #define LIGHT_SENSOR_PORT 0
 #define ULTRA_SENSOR_PORT 1
@@ -97,6 +97,7 @@ color_mode_t sensor_mode = COL_COLOR;
  Global variables
  ------------------------------------------------------------------------- */
 int flag = LOCK;
+int cond = LOCK;
 
 int current_state = STATE_CORRECT;
 int current_color = WHITE;
@@ -116,7 +117,7 @@ void check_state_task(void);
 /* -------------------------------------------------------------------------
  Prototypes
  ------------------------------------------------------------------------- */
-void wating(void);
+void waiting(void);
 void turn_right(int degree);
 void turn_left(int degree);
 void random_turn(void);
@@ -178,10 +179,10 @@ int usrmain(int argc, char * argv[]) {
 
 void start_end_task(void) {
 	flag = LOCK;
-	wating();
+	waiting();
 	while (sensor_get(SOUND_SENSOR_PORT) > SOUND_MIN_VALUE) {
 		glcdGotoChar(0, 0);
-		glcd_printf("val : %d", ev3_sensor_get(0));
+		glcd_printf("val : %d\ncond : %d", ev3_sensor_get(0),cond);
 	}
 
 	turn_right(90);
@@ -196,25 +197,36 @@ void start_end_task(void) {
 
 void move_robot_task(void) {
 	while (1) {
+		glcdGotoChar(0, 0);
+		glcd_printf("val : %d\ncond : %d\nstate : %d", ev3_sensor_get(0),cond,current_state);
 		switch (current_state) {
 
 		case STATE_ESCAPE:
 			go_backward(DEFAULT_SPEED);
-			bsp_busywaitms(100);
+			bsp_busywaitms(10);
 			turn_right(180);
 			break;
 
 		case STATE_WRONG:
 			random_turn();
+			go_forward(DEFAULT_SPEED);
+			bsp_busywaitms(10);
 			break;
 
 		case STATE_GOAL:
 			go_forward(DEFAULT_SPEED);
 			bsp_busywaitms(30);
-
+			random_turn();
 			go_backward(DEFAULT_SPEED);
 			bsp_busywaitms(30);
+
+			if (sensor_get(1)<50){
+				go_forward(MAX_SPEED);
+				bsp_busywaitms(30);
+			}
+
 			break;
+
 
 		default:
 			go_forward(DEFAULT_SPEED);
@@ -244,11 +256,17 @@ void check_state_task(void) {
 
 			if (cnt > (MAC_ARRAY_SIZE / 2)) {
 				current_color = color_array[i];
+				if(current_color == 1){
+					cond = UNLOCK;
+				}
 				break;
 			}
 		}
 
+
+
 		state = current_color - previous_color;
+
 		switch (current_color) {
 		case WHITE:
 			current_state = STATE_ESCAPE;
@@ -258,15 +276,16 @@ void check_state_task(void) {
 		case BLUE:
 			current_state = (state <= 0) ? STATE_CORRECT : STATE_WRONG;
 			break;
-
+		case NONE:
 		case BLACK:
 			current_state = STATE_GOAL;
-			break;
 		default:
+			current_state = STATE_WRONG;
 			break;
 		}
 		previous_color = current_color;
-		task_sleep(20);
+
+		task_sleep(10);
 	}
 }
 
@@ -320,16 +339,16 @@ void random_turn(void) {
 }
 
 void go_forward(int speed) {
-	motor_set(R_MOTOR_PORT,-speed);
-	motor_set(L_MOTOR_PORT,-speed);
-}
-
-void go_backward(int speed) {
-	motor_set(R_MOTOR_PORT,speed);
+	motor_set(R_MOTOR_PORT,speed+30);
 	motor_set(L_MOTOR_PORT,speed);
 }
 
-void wating(void) {
+void go_backward(int speed) {
+	motor_set(R_MOTOR_PORT,-speed-30);
+	motor_set(L_MOTOR_PORT,-speed);
+}
+
+void waiting(void) {
 	while(flag == LOCK){
 
 	}
@@ -341,6 +360,5 @@ void sw1_isr(void) {
 }
 
 void sw2_isr(void) {
-
 }
 
