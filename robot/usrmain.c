@@ -208,7 +208,7 @@ void move_robot_task(void) {
 			break;
 
 		case STATE_WRONG:
-			random_turn();
+			random_turn();//잘못가고있을때(바깥쪽으로 가고있을때는 랜덤하게 회전한다.
 			go_forward(DEFAULT_SPEED);
 			bsp_busywaitms(10);
 			break;
@@ -216,7 +216,7 @@ void move_robot_task(void) {
 		case STATE_GOAL:
 			go_forward(DEFAULT_SPEED);
 			bsp_busywaitms(30);
-			random_turn();
+			random_turn();//검은색 위에서 랜덤하게 회전
 			go_backward(DEFAULT_SPEED);
 			bsp_busywaitms(30);
 
@@ -229,7 +229,7 @@ void move_robot_task(void) {
 
 
 		default:
-			go_forward(DEFAULT_SPEED);
+			go_forward(DEFAULT_SPEED);//초,파 등에 있을때는 빨리 움직임
 			break;
 		}
 		task_sleep(10);
@@ -276,9 +276,10 @@ void check_state_task(void) {
 		case BLUE:
 			current_state = (state <= 0) ? STATE_CORRECT : STATE_WRONG;
 			break;
-		case NONE:
+		case NONE://검은색으로 받음
 		case BLACK:
 			current_state = STATE_GOAL;
+			break;
 		default:
 			current_state = STATE_WRONG;
 			break;
